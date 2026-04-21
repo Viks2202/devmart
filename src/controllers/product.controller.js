@@ -1,63 +1,78 @@
-const getAllProducts = (req, res) => {
-  const products = [
-    { id: "1", name: "iPhone 15", price: 79999, category: "electronics" },
-    { id: "2", name: "Nike Shoes", price: 4999, category: "clothing" },
-    { id: "3", name: "Node.js Book", price: 599, category: "books" }
-  ]
-  res.status(200).json({ success: true, products })
-}
+const asyncHandler = require("../middlewares/async.middleware")
+const CustomError = require("../middlewares/customError")
 
-const getProduct = (req, res) => {
-  const id = req.params.id
+const products = [
+  { id: "1", name: "iPhone 15", price: 79999, category: "electronics" },
+  { id: "2", name: "Nike Shoes", price: 4999, category: "clothing" },
+  { id: "3", name: "Node.js Book", price: 599, category: "books" }
+]
 
-  const products = [
-    { id: "1", name: "iPhone 15", price: 79999 },
-    { id: "2", name: "Nike Shoes", price: 4999 },
-    { id: "3", name: "Node.js Book", price: 599 }
-  ]
+// GET all products
+const getAllProducts = asyncHandler(async (req, res) => {
+  res.status(200).json({
+    success: true,
+    count: products.length,
+    products
+  })
+})
 
-  const product = products.find(p => p.id === id)
+// GET single product
+const getProduct = asyncHandler(async (req, res) => {
+  const product = products.find(p => p.id === req.params.id)
 
   if (!product) {
-    return res.status(404).json({ success: false, message: "Product not found" })
+    throw new CustomError("Product not found", 404)
   }
 
   res.status(200).json({ success: true, product })
-}
+})
 
-const createProduct = (req, res) => {
+// POST create product
+const createProduct = asyncHandler(async (req, res) => {
   const { name, price, category } = req.body
 
   if (!name || !price || !category) {
-    return res.status(400).json({
-      success: false,
-      message: "name, price and category are required"
-    })
+    throw new CustomError("name, price and category are required", 400)
   }
 
   const newProduct = { id: "4", name, price, category }
   res.status(201).json({ success: true, product: newProduct })
-}
+})
 
-const updateProduct = (req, res) => {
-  const id = req.params.id
-  const data = req.body
+// PUT update product
+const updateProduct = asyncHandler(async (req, res) => {
+  const product = products.find(p => p.id === req.params.id)
+
+  if (!product) {
+    throw new CustomError("Product not found", 404)
+  }
 
   res.status(200).json({
     success: true,
     message: "Product updated",
-    id: id,
-    updated: data
+    id: req.params.id,
+    updated: req.body
   })
-}
+})
 
-const deleteProduct = (req, res) => {
-  const id = req.params.id
+// DELETE product
+const deleteProduct = asyncHandler(async (req, res) => {
+  const product = products.find(p => p.id === req.params.id)
+
+  if (!product) {
+    throw new CustomError("Product not found", 404)
+  }
 
   res.status(200).json({
     success: true,
-    message: `Product with id ${id} deleted`
+    message: `Product with id ${req.params.id} deleted`
   })
-}
+})
 
-module.exports = { getAllProducts, getProduct, createProduct,updateProduct,deleteProduct }
+module.exports = {
+  getAllProducts,
+  getProduct,
+  createProduct,
+  updateProduct,
+  deleteProduct
+}
