@@ -11,6 +11,7 @@ const products = [
 const getAllProducts = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
+    requestedAt: req.requestTime, 
     count: products.length,
     products
   })

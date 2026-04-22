@@ -4,24 +4,20 @@ require("dotenv").config()
 const productRoutes = require("./src/routes/product.routes")
 const logger = require("./src/middlewares/logger.middleware")
 const errorHandler = require("./src/middlewares/error.middleware")
+const requestTime = require("./src/middlewares/requestTime.middleware")
 
 const app = express()
 
-// built-in middleware
 app.use(express.json())
-
-// custom logger — runs on every request
 app.use(logger)
+app.use(requestTime)        // ← add this line
 
-// routes
 app.use("/products", productRoutes)
 
-// home
 app.get("/", (req, res) => {
   res.json({ message: "DevMart API is running!" })
 })
 
-// 404 — unknown routes
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -29,7 +25,6 @@ app.use((req, res) => {
   })
 })
 
-// global error handler — MUST be last
 app.use(errorHandler)
 
 const PORT = process.env.PORT || 8000
