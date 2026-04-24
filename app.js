@@ -1,6 +1,7 @@
 const express = require("express")
 require("dotenv").config()
 
+const connectDB = require("./src/config/db")
 const productRoutes = require("./src/routes/product.routes")
 const logger = require("./src/middlewares/logger.middleware")
 const errorHandler = require("./src/middlewares/error.middleware")
@@ -8,9 +9,12 @@ const requestTime = require("./src/middlewares/requestTime.middleware")
 
 const app = express()
 
+// connect database
+connectDB()
+
 app.use(express.json())
 app.use(logger)
-app.use(requestTime)        // ← add this line
+app.use(requestTime)
 
 app.use("/products", productRoutes)
 
