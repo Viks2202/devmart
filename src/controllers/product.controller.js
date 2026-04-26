@@ -60,11 +60,50 @@ const deleteProduct = asyncHandler(async (req, res) => {
     message: "Product deleted successfully"
   })
 })
+// GET product stats
+const getProductStats = asyncHandler(async (req, res) => {
+  const products = await Product.find({ isActive: true })
+
+  // total products
+  const total = products.length
+
+  // total stock
+  const totalStock = products.reduce((acc, p) => acc + p.stock, 0)
+
+  // average price
+  const avgPrice = products.reduce((acc, p) => acc + p.price, 0) / total
+
+  // most expensive
+  const mostExpensive = products.reduce((max, p) => 
+    p.price > max.price ? p : max, products[0])
+
+  // cheapest
+  const cheapest = products.reduce((min, p) => 
+    p.price < min.price ? p : min, products[0])
+
+  res.status(200).json({
+    success: true,
+    stats: {
+      totalProducts: total,
+      totalStock,
+      averagePrice: Math.round(avgPrice),
+      mostExpensive: {
+        name: mostExpensive.name,
+        price: mostExpensive.price
+      },
+      cheapest: {
+        name: cheapest.name,
+        price: cheapest.price
+      }
+    }
+  })
+})
 
 module.exports = {
   getAllProducts,
   getProduct,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  getProductStats 
 }
