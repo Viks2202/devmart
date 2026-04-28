@@ -99,11 +99,51 @@ const getProductStats = asyncHandler(async (req, res) => {
   })
 })
 
+const getProductsByCategory = asyncHandler(async (req, res) => {
+  const { category } = req.params
+  const validCategories = ["electronics", "clothing", "books", "food", "other"]
+
+  if (!validCategories.includes(category)) {
+    throw new CustomError("Invalid category", 400)
+  }
+
+  const products = await Product.find({ category, isActive: true })
+
+  res.status(200).json({
+    success: true,
+    category,
+    count: products.length,
+    products
+  })
+})
+
+const searchProducts = asyncHandler(async (req, res) => {
+  const { q } = req.query
+
+  if (!q) {
+    throw new CustomError("Search query is required", 400)
+  }
+
+  const products = await Product.find({
+    name: { $regex: q, $options: "i" },
+    isActive: true
+  })
+
+  res.status(200).json({
+    success: true,
+    query: q,
+    count: products.length,
+    products
+  })
+})
+
 module.exports = {
   getAllProducts,
   getProduct,
   createProduct,
   updateProduct,
   deleteProduct,
-  getProductStats 
+  getProductStats,
+  getProductsByCategory,
+  searchProducts  
 }
