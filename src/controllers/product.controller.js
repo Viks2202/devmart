@@ -4,11 +4,68 @@ const Product = require("../models/product.model")
 
 // GET all products
 const getAllProducts = asyncHandler(async (req, res) => {
-  const products = await Product.find()
+  const {
+    category,
+    minPrice,
+    maxPrice,
+    search,
+    sort,
+    page,
+    limit
+  } = req.query
+
+  // build filter object
+  const filter = { isActive: true }
+
+  // category filter
+  if (category) {
+    filter.category = category
+  }
+
+  // price range filter
+  if (minPrice || maxPrice) {
+    filter.price = {}
+    if (minPrice) filter.price.$gte = Number(minPrice)
+    if (maxPrice) filter.price.$lte = Number(maxPrice)
+  }
+
+  // search filter
+  if (search) {
+    filter.name = { $regex: search, $options: "i" }
+  }
+
+  // pagination
+  const pageNum = Number(page) || 1
+  const limitNum = Number(limit) || 10
+  const skip = (pageNum - 1) * limitNum
+
+  // sort options
+  let sortOption = { createdAt: -1 }  // default newest first
+  if (sort === "price_asc")  sortOption = { price: 1 }
+  if (sort === "price_desc") sortOption = { price: -1 }
+  if (sort === "name_asc")   sortOption = { name: 1 }
+  if (sort === "newest")     sortOption = { createdAt: -1 }
+
+  // execute query
+  const products = await Product.find(filter)
+    .sort(sortOption)
+    .skip(skip)
+    .limit(limitNum)
+
+  // total count for pagination info
+  const total = await Product.countDocuments(filter)
 
   res.status(200).json({
     success: true,
     requestedAt: req.requestTime,
+    pagination: {
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
+      hasNextPage: pageNum < Math.ceil(total / limitNum),
+      hasPrevPage: pageNum > 1
+    },
     count: products.length,
     products
   })
