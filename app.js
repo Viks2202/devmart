@@ -1,21 +1,24 @@
 const express = require("express")
+const cookieParser = require("cookie-parser")
 require("dotenv").config()
 
 const connectDB = require("./src/config/db")
 const productRoutes = require("./src/routes/product.routes")
+const authRoutes = require("./src/routes/auth.routes")
 const logger = require("./src/middlewares/logger.middleware")
 const errorHandler = require("./src/middlewares/error.middleware")
 const requestTime = require("./src/middlewares/requestTime.middleware")
 
 const app = express()
 
-// connect database
 connectDB()
 
 app.use(express.json())
+app.use(cookieParser())
 app.use(logger)
 app.use(requestTime)
 
+app.use("/auth", authRoutes)
 app.use("/products", productRoutes)
 
 app.get("/", (req, res) => {

@@ -1,6 +1,6 @@
 const logger = (req, res, next) => {
   const start = Date.now()
-  const url = req.originalUrl   // ← change req.url to req.originalUrl
+  const url = req.originalUrl
 
   console.log(`➡️  ${req.method} ${url}`)
 
@@ -9,7 +9,7 @@ const logger = (req, res, next) => {
     console.log(`✅ ${req.method} ${url} → ${res.statusCode} (${duration}ms)`)
   })
 
-  next()
+  next()   // ← make sure this is here and not inside res.on("finish")
 }
 
 module.exports = logger
