@@ -3,22 +3,30 @@ const router = express.Router()
 
 const {
   register,
+  verifyEmail,
   login,
+  forgotPassword,
+  resetPassword,
   getMe,
+  updateProfile,
+  changePassword,
   handleRefreshToken,
   logout,
-  updateProfile,
-  changePassword
+  resendVerification
 } = require("../controllers/auth.controller")
 
 const { protect } = require("../middlewares/auth.middleware")
 
 router.post("/register", register)
+router.get("/verify-email/:token", verifyEmail)
 router.post("/login", login)
+router.post("/forgot-password", forgotPassword)
+router.post("/reset-password/:token", resetPassword)
 router.get("/me", protect, getMe)
-router.post("/refresh", handleRefreshToken)
-router.post("/logout", protect, logout)
 router.put("/profile", protect, updateProfile)
 router.put("/change-password", protect, changePassword)
+router.post("/refresh", handleRefreshToken)
+router.post("/logout", protect, logout)
+router.post("/resend-verification", protect, resendVerification)
 
 module.exports = router

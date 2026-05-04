@@ -1,6 +1,7 @@
 const express = require("express")
 const cookieParser = require("cookie-parser")
 require("dotenv").config()
+const userRoutes = require("./src/routes/user.routes")
 
 const connectDB = require("./src/config/db")
 const productRoutes = require("./src/routes/product.routes")
@@ -20,6 +21,7 @@ app.use(requestTime)
 
 app.use("/auth", authRoutes)
 app.use("/products", productRoutes)
+app.use("/users", userRoutes)
 
 app.get("/", (req, res) => {
   res.json({ message: "DevMart API is running!" })
