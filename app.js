@@ -1,11 +1,11 @@
 const express = require("express")
 const cookieParser = require("cookie-parser")
 require("dotenv").config()
-const userRoutes = require("./src/routes/user.routes")
 
 const connectDB = require("./src/config/db")
 const productRoutes = require("./src/routes/product.routes")
 const authRoutes = require("./src/routes/auth.routes")
+const userRoutes = require("./src/routes/user.routes")
 const logger = require("./src/middlewares/logger.middleware")
 const errorHandler = require("./src/middlewares/error.middleware")
 const requestTime = require("./src/middlewares/requestTime.middleware")
