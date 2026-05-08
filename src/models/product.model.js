@@ -32,9 +32,14 @@ const productSchema = new mongoose.Schema(
       min: [0, "Stock cannot be negative"]
     },
     images: {
-      type: [String],
-      default: []
-    },
+  type: [
+    {
+      url: { type: String },
+      publicId: { type: String }
+    }
+  ],
+  default: []
+},
     ratings: {
       type: Number,
       default: 0,
@@ -50,6 +55,8 @@ const productSchema = new mongoose.Schema(
     timestamps: true   // auto adds createdAt and updatedAt
   }
 )
+
+
 
 const Product = mongoose.model("Product", productSchema)
 
