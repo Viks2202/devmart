@@ -1,6 +1,10 @@
 const asyncHandler = require("../middlewares/async.middleware")
 const CustomError = require("../middlewares/customError")
 const Product = require("../models/product.model")
+const {
+  uploadToCloudinary,
+  deleteFromCloudinary
+} = require("../middlewares/upload.middleware")
 
 // GET all products
 const getAllProducts = asyncHandler(async (req, res) => {
@@ -83,8 +87,40 @@ const getProduct = asyncHandler(async (req, res) => {
 })
 
 // POST create product
-const createProduct = asyncHandler(async (req, res) => {
-  const product = await Product.create(req.body)
+const createProduct = asyncHandler(async (req, res, next) => {
+  const { name, description, price, category, stock, brand } = req.body
+
+  if (!name || !description || !price || !category) {
+    return next(
+      new CustomError("name, description, price and category are required", 400)
+    )
+  }
+
+  let images = []
+
+  // upload images if provided
+  if (req.files && req.files.length > 0) {
+    for (const file of req.files) {
+      const result = await uploadToCloudinary(
+        file.buffer,
+        "devmart/products"
+      )
+      images.push({
+        url: result.secure_url,
+        publicId: result.public_id
+      })
+    }
+  }
+
+  const product = await Product.create({
+    name,
+    description,
+    price,
+    category,
+    stock: stock || 0,
+    brand,
+    images
+  })
 
   res.status(201).json({ success: true, product })
 })
@@ -105,12 +141,28 @@ const updateProduct = asyncHandler(async (req, res) => {
 })
 
 // DELETE product
-const deleteProduct = asyncHandler(async (req, res) => {
-  const product = await Product.findByIdAndDelete(req.params.id)
+const deleteProduct = asyncHandler(async (req, res, next) => {
+  const product = await Product.findById(req.params.id)
 
   if (!product) {
-    throw new CustomError("Product not found", 404)
+    return next(new CustomError("Product not found", 404))
   }
+
+  // delete images from Cloudinary first
+  if (product.images && product.images.length > 0) {
+    for (const image of product.images) {
+      if (image.publicId) {
+        await deleteFromCloudinary(image.publicId)
+      }
+    }
+  }
+
+  // soft delete
+  await Product.findByIdAndUpdate(
+    req.params.id,
+    { isActive: false },
+    { new: true }
+  )
 
   res.status(200).json({
     success: true,
@@ -194,6 +246,69 @@ const searchProducts = asyncHandler(async (req, res) => {
   })
 })
 
+// upload images to existing product
+const uploadProductImages = asyncHandler(async (req, res, next) => {
+  const product = await Product.findById(req.params.id)
+
+  if (!product) {
+    return next(new CustomError("Product not found", 404))
+  }
+
+  if (!req.files || req.files.length === 0) {
+    return next(new CustomError("Please upload at least one image", 400))
+  }
+
+  const newImages = []
+
+  for (const file of req.files) {
+    const result = await uploadToCloudinary(
+      file.buffer,
+      "devmart/products"
+    )
+    newImages.push({
+      url: result.secure_url,
+      publicId: result.public_id
+    })
+  }
+
+  product.images = [...product.images, ...newImages]
+  await product.save()
+
+  res.status(200).json({
+    success: true,
+    message: "Images uploaded successfully",
+    images: product.images
+  })
+})
+
+// delete specific image from product
+const deleteProductImage = asyncHandler(async (req, res, next) => {
+  const { publicId } = req.body
+
+  if (!publicId) {
+    return next(new CustomError("publicId is required", 400))
+  }
+
+  const product = await Product.findById(req.params.id)
+
+  if (!product) {
+    return next(new CustomError("Product not found", 404))
+  }
+
+  await deleteFromCloudinary(publicId)
+
+  product.images = product.images.filter(
+    img => img.publicId !== publicId
+  )
+  await product.save()
+
+  res.status(200).json({
+    success: true,
+    message: "Image deleted successfully",
+    images: product.images
+  })
+})
+
 module.exports = {
   getAllProducts,
   getProduct,
@@ -202,5 +317,7 @@ module.exports = {
   deleteProduct,
   getProductStats,
   getProductsByCategory,
-  searchProducts  
+  searchProducts,
+  uploadProductImages,
+  deleteProductImage
 }
