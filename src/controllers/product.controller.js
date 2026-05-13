@@ -18,45 +18,35 @@ const getAllProducts = asyncHandler(async (req, res) => {
     limit
   } = req.query
 
-  // build filter object
   const filter = { isActive: true }
 
-  // category filter
-  if (category) {
-    filter.category = category
-  }
+  if (category) filter.category = category
 
-  // price range filter
   if (minPrice || maxPrice) {
     filter.price = {}
     if (minPrice) filter.price.$gte = Number(minPrice)
     if (maxPrice) filter.price.$lte = Number(maxPrice)
   }
 
-  // search filter
   if (search) {
     filter.name = { $regex: search, $options: "i" }
   }
 
-  // pagination
   const pageNum = Number(page) || 1
   const limitNum = Number(limit) || 10
   const skip = (pageNum - 1) * limitNum
 
-  // sort options
-  let sortOption = { createdAt: -1 }  // default newest first
+  let sortOption = { createdAt: -1 }
   if (sort === "price_asc")  sortOption = { price: 1 }
   if (sort === "price_desc") sortOption = { price: -1 }
   if (sort === "name_asc")   sortOption = { name: 1 }
   if (sort === "newest")     sortOption = { createdAt: -1 }
 
-  // execute query
   const products = await Product.find(filter)
     .sort(sortOption)
     .skip(skip)
     .limit(limitNum)
 
-  // total count for pagination info
   const total = await Product.countDocuments(filter)
 
   res.status(200).json({
@@ -76,11 +66,11 @@ const getAllProducts = asyncHandler(async (req, res) => {
 })
 
 // GET single product
-const getProduct = asyncHandler(async (req, res) => {
+const getProduct = asyncHandler(async (req, res, next) => {
   const product = await Product.findById(req.params.id)
 
   if (!product) {
-    throw new CustomError("Product not found", 404)
+    return next(new CustomError("Product not found", 404))
   }
 
   res.status(200).json({ success: true, product })
@@ -98,13 +88,9 @@ const createProduct = asyncHandler(async (req, res, next) => {
 
   let images = []
 
-  // upload images if provided
   if (req.files && req.files.length > 0) {
     for (const file of req.files) {
-      const result = await uploadToCloudinary(
-        file.buffer,
-        "devmart/products"
-      )
+      const result = await uploadToCloudinary(file.buffer, "devmart/products")
       images.push({
         url: result.secure_url,
         publicId: result.public_id
@@ -126,7 +112,7 @@ const createProduct = asyncHandler(async (req, res, next) => {
 })
 
 // PUT update product
-const updateProduct = asyncHandler(async (req, res) => {
+const updateProduct = asyncHandler(async (req, res, next) => {
   const product = await Product.findByIdAndUpdate(
     req.params.id,
     req.body,
@@ -134,7 +120,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   )
 
   if (!product) {
-    throw new CustomError("Product not found", 404)
+    return next(new CustomError("Product not found", 404))
   }
 
   res.status(200).json({ success: true, product })
@@ -148,7 +134,6 @@ const deleteProduct = asyncHandler(async (req, res, next) => {
     return next(new CustomError("Product not found", 404))
   }
 
-  // delete images from Cloudinary first
   if (product.images && product.images.length > 0) {
     for (const image of product.images) {
       if (image.publicId) {
@@ -157,7 +142,6 @@ const deleteProduct = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // soft delete
   await Product.findByIdAndUpdate(
     req.params.id,
     { isActive: false },
@@ -169,25 +153,24 @@ const deleteProduct = asyncHandler(async (req, res, next) => {
     message: "Product deleted successfully"
   })
 })
-// GET product stats
-const getProductStats = asyncHandler(async (req, res) => {
-  const products = await Product.find({ isActive: true })
 
-  // total products
+// GET product stats
+const getProductStats = asyncHandler(async (req, res, next) => {
+  const products = await Product.find({ isActive: true })
   const total = products.length
 
-  // total stock
+  if (total === 0) {
+    return res.status(200).json({
+      success: true,
+      stats: { totalProducts: 0 }
+    })
+  }
+
   const totalStock = products.reduce((acc, p) => acc + p.stock, 0)
-
-  // average price
   const avgPrice = products.reduce((acc, p) => acc + p.price, 0) / total
-
-  // most expensive
-  const mostExpensive = products.reduce((max, p) => 
+  const mostExpensive = products.reduce((max, p) =>
     p.price > max.price ? p : max, products[0])
-
-  // cheapest
-  const cheapest = products.reduce((min, p) => 
+  const cheapest = products.reduce((min, p) =>
     p.price < min.price ? p : min, products[0])
 
   res.status(200).json({
@@ -196,24 +179,19 @@ const getProductStats = asyncHandler(async (req, res) => {
       totalProducts: total,
       totalStock,
       averagePrice: Math.round(avgPrice),
-      mostExpensive: {
-        name: mostExpensive.name,
-        price: mostExpensive.price
-      },
-      cheapest: {
-        name: cheapest.name,
-        price: cheapest.price
-      }
+      mostExpensive: { name: mostExpensive.name, price: mostExpensive.price },
+      cheapest: { name: cheapest.name, price: cheapest.price }
     }
   })
 })
 
-const getProductsByCategory = asyncHandler(async (req, res) => {
+// GET products by category
+const getProductsByCategory = asyncHandler(async (req, res, next) => {
   const { category } = req.params
   const validCategories = ["electronics", "clothing", "books", "food", "other"]
 
   if (!validCategories.includes(category)) {
-    throw new CustomError("Invalid category", 400)
+    return next(new CustomError("Invalid category", 400))
   }
 
   const products = await Product.find({ category, isActive: true })
@@ -226,11 +204,12 @@ const getProductsByCategory = asyncHandler(async (req, res) => {
   })
 })
 
-const searchProducts = asyncHandler(async (req, res) => {
+// GET search products
+const searchProducts = asyncHandler(async (req, res, next) => {
   const { q } = req.query
 
   if (!q) {
-    throw new CustomError("Search query is required", 400)
+    return next(new CustomError("Search query is required", 400))
   }
 
   const products = await Product.find({
@@ -261,10 +240,7 @@ const uploadProductImages = asyncHandler(async (req, res, next) => {
   const newImages = []
 
   for (const file of req.files) {
-    const result = await uploadToCloudinary(
-      file.buffer,
-      "devmart/products"
-    )
+    const result = await uploadToCloudinary(file.buffer, "devmart/products")
     newImages.push({
       url: result.secure_url,
       publicId: result.public_id
