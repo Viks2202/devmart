@@ -9,6 +9,7 @@ const userRoutes = require("./src/routes/user.routes")
 const cartRoutes = require("./src/routes/cart.routes")
 const orderRoutes = require("./src/routes/order.routes")
 const reviewRoutes = require("./src/routes/review.routes")
+const adminRoutes = require("./src/routes/admin.routes")
 const logger = require("./src/middlewares/logger.middleware")
 const errorHandler = require("./src/middlewares/error.middleware")
 const requestTime = require("./src/middlewares/requestTime.middleware")
@@ -28,9 +29,21 @@ app.use("/users", userRoutes)
 app.use("/cart", cartRoutes)
 app.use("/orders", orderRoutes)
 app.use("/reviews", reviewRoutes)
+app.use("/admin", adminRoutes)
 
 app.get("/", (req, res) => {
-  res.json({ message: "DevMart API is running!" })
+  res.json({
+    message: "DevMart API is running!",
+    version: "1.0.0",
+    endpoints: {
+      auth: "/auth",
+      products: "/products",
+      cart: "/cart",
+      orders: "/orders",
+      reviews: "/reviews",
+      admin: "/admin"
+    }
+  })
 })
 
 app.use((req, res) => {
