@@ -3,7 +3,6 @@ const CustomError = require("../middlewares/customError")
 const Cart = require("../models/cart.model")
 const Product = require("../models/product.model")
 
-// GET my cart
 const getCart = asyncHandler(async (req, res, next) => {
   let cart = await Cart.findOne({ user: req.user.id })
     .populate("items.product", "name images price stock isActive")
@@ -15,7 +14,6 @@ const getCart = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, cart })
 })
 
-// ADD to cart
 const addToCart = asyncHandler(async (req, res, next) => {
   const { productId, quantity } = req.body
 
@@ -29,34 +27,30 @@ const addToCart = asyncHandler(async (req, res, next) => {
     return next(new CustomError("Product not found", 404))
   }
 
-  if (!product.isActive) {
+  // fixed check — works for both string "true" and boolean true
+  if (product.isActive === false || product.isActive === "false") {
     return next(new CustomError("Product is not available", 400))
   }
 
-  if (product.stock < quantity) {
-    return next(new CustomError(`Only ${product.stock} items in stock`, 400))
+  if (product.stock < Number(quantity)) {
+    return next(
+      new CustomError(`Only ${product.stock} items in stock`, 400)
+    )
   }
 
   let cart = await Cart.findOne({ user: req.user.id })
 
   if (!cart) {
-    // create new cart
-    cart = new Cart({
-      user: req.user.id,
-      items: []
-    })
+    cart = new Cart({ user: req.user.id, items: [] })
   }
 
-  // check if product already in cart
   const existingItem = cart.items.find(
     item => item.product.toString() === productId
   )
 
   if (existingItem) {
-    // update quantity
     existingItem.quantity += Number(quantity)
   } else {
-    // add new item
     cart.items.push({
       product: productId,
       quantity: Number(quantity),
@@ -73,7 +67,6 @@ const addToCart = asyncHandler(async (req, res, next) => {
   })
 })
 
-// UPDATE cart item quantity
 const updateCartItem = asyncHandler(async (req, res, next) => {
   const { productId, quantity } = req.body
 
@@ -98,14 +91,9 @@ const updateCartItem = asyncHandler(async (req, res, next) => {
   item.quantity = Number(quantity)
   await cart.save()
 
-  res.status(200).json({
-    success: true,
-    message: "Cart updated",
-    cart
-  })
+  res.status(200).json({ success: true, message: "Cart updated", cart })
 })
 
-// REMOVE item from cart
 const removeFromCart = asyncHandler(async (req, res, next) => {
   const { productId } = req.params
 
@@ -128,7 +116,6 @@ const removeFromCart = asyncHandler(async (req, res, next) => {
   })
 })
 
-// CLEAR cart
 const clearCart = asyncHandler(async (req, res, next) => {
   const cart = await Cart.findOne({ user: req.user.id })
 
@@ -139,10 +126,7 @@ const clearCart = asyncHandler(async (req, res, next) => {
   cart.items = []
   await cart.save()
 
-  res.status(200).json({
-    success: true,
-    message: "Cart cleared"
-  })
+  res.status(200).json({ success: true, message: "Cart cleared" })
 })
 
 module.exports = {
