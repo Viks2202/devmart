@@ -3,11 +3,13 @@ const CustomError = require("../middlewares/customError")
 const Order = require("../models/order.model")
 const Cart = require("../models/cart.model")
 const Product = require("../models/product.model")
+const Coupon = require("../models/coupon.model")
 
-// PLACE order from cart
+// PLACE order from cart (UPDATED WITH COUPON LOGIC)
 const placeOrder = asyncHandler(async (req, res, next) => {
-  const { shippingAddress, paymentMethod } = req.body
+  const { shippingAddress, paymentMethod, couponCode } = req.body
 
+  // Validate address
   if (!shippingAddress) {
     return next(new CustomError("Shipping address is required", 400))
   }
@@ -23,32 +25,93 @@ const placeOrder = asyncHandler(async (req, res, next) => {
     )
   }
 
+  // Get cart
   const cart = await Cart.findOne({ user: req.user.id })
     .populate("items.product")
 
   if (!cart || cart.items.length === 0) {
-    return next(new CustomError("Cart is empty", 400))
+    return next(new CustomError("Your cart is empty", 400))
   }
 
-  // build order items
+  // Build order items
   const orderItems = cart.items.map(item => ({
     product: item.product._id,
     name: item.product.name,
     price: item.price,
     quantity: item.quantity,
-    image: item.product.images[0]?.url || ""
+    image: item.product.images?.[0]?.url || ""
   }))
 
-  // create order
+  // =========================
+  // ✅ COUPON LOGIC START
+  // =========================
+  let discountAmount = 0
+  let couponApplied = null
+
+  if (couponCode) {
+    const coupon = await Coupon.findOne({
+      code: couponCode.toUpperCase(),
+      isActive: true,
+      expiresAt: { $gt: new Date() }
+    })
+
+    if (coupon) {
+      const alreadyUsed = coupon.usedBy
+        .map(id => id.toString())
+        .includes(req.user.id)
+
+      const limitReached =
+        coupon.usageLimit !== null &&
+        coupon.usedCount >= coupon.usageLimit
+
+      if (
+        !alreadyUsed &&
+        !limitReached &&
+        cart.totalPrice >= coupon.minOrderAmount
+      ) {
+        if (coupon.discountType === "percentage") {
+          discountAmount =
+            (cart.totalPrice * coupon.discountValue) / 100
+
+          if (coupon.maxDiscountAmount !== null) {
+            discountAmount = Math.min(
+              discountAmount,
+              coupon.maxDiscountAmount
+            )
+          }
+        } else {
+          discountAmount = coupon.discountValue
+        }
+
+        discountAmount = Math.min(discountAmount, cart.totalPrice)
+
+        // mark coupon used
+        coupon.usedCount += 1
+        coupon.usedBy.push(req.user.id)
+        await coupon.save()
+
+        couponApplied = coupon.code
+      }
+    }
+  }
+
+  const finalAmount = Math.round(cart.totalPrice - discountAmount)
+
+  // =========================
+  // ✅ CREATE ORDER
+  // =========================
   const order = await Order.create({
     user: req.user.id,
     items: orderItems,
     shippingAddress,
     totalPrice: cart.totalPrice,
+    discountAmount: Math.round(discountAmount),
+    finalAmount,
+    couponCode: couponApplied,
     paymentMethod: paymentMethod || "cod"
   })
 
-  // clear cart after order
+  // Clear cart
   cart.items = []
   await cart.save()
 
@@ -58,6 +121,7 @@ const placeOrder = asyncHandler(async (req, res, next) => {
     order
   })
 })
+
 
 // GET my orders
 const getMyOrders = asyncHandler(async (req, res, next) => {
@@ -71,6 +135,7 @@ const getMyOrders = asyncHandler(async (req, res, next) => {
   })
 })
 
+
 // GET single order
 const getOrder = asyncHandler(async (req, res, next) => {
   const order = await Order.findById(req.params.id)
@@ -79,7 +144,6 @@ const getOrder = asyncHandler(async (req, res, next) => {
     return next(new CustomError("Order not found", 404))
   }
 
-  // only owner or admin can see order
   if (
     order.user.toString() !== req.user.id &&
     req.user.role !== "admin"
@@ -87,14 +151,25 @@ const getOrder = asyncHandler(async (req, res, next) => {
     return next(new CustomError("Not authorized to view this order", 403))
   }
 
-  res.status(200).json({ success: true, order })
+  res.status(200).json({
+    success: true,
+    order
+  })
 })
 
-// UPDATE order status — admin only
+
+// UPDATE order status — admin
 const updateOrderStatus = asyncHandler(async (req, res, next) => {
   const { status } = req.body
 
-  const validStatuses = ["pending", "confirmed", "shipped", "delivered", "cancelled"]
+  const validStatuses = [
+    "pending",
+    "confirmed",
+    "shipped",
+    "delivered",
+    "cancelled"
+  ]
+
   if (!validStatuses.includes(status)) {
     return next(new CustomError("Invalid status", 400))
   }
@@ -116,14 +191,16 @@ const updateOrderStatus = asyncHandler(async (req, res, next) => {
   })
 })
 
-// GET all orders — admin only
+
+// GET all orders — admin
 const getAllOrders = asyncHandler(async (req, res, next) => {
   const orders = await Order.find()
     .populate("user", "name email")
     .sort({ createdAt: -1 })
 
   const totalRevenue = orders.reduce(
-    (sum, order) => sum + order.totalPrice, 0
+    (sum, order) => sum + order.totalPrice,
+    0
   )
 
   res.status(200).json({
@@ -133,6 +210,7 @@ const getAllOrders = asyncHandler(async (req, res, next) => {
     orders
   })
 })
+
 
 // CANCEL order
 const cancelOrder = asyncHandler(async (req, res, next) => {

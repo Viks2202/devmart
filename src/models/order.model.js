@@ -43,7 +43,29 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: ["cod", "online"],
       default: "cod"
+    },
+
+    couponCode: {
+      type: String,
+      default: null
+    },
+    discountAmount: {
+      type: Number,
+      default: 0
+    },
+    finalAmount: {
+      type: Number,
+      default: 0
+    },
+    razorpayOrderId: {
+      type: String,
+      default: null
+    },
+    razorpayPaymentId: {
+      type: String,
+      default: null
     }
+    
   },
   { timestamps: true }
 )

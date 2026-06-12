@@ -1,3 +1,83 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Authentication and user management
+ */
+
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register new user
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email, password]
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Vikas Sharma
+ *               email:
+ *                 type: string
+ *                 example: vikas@gmail.com
+ *               password:
+ *                 type: string
+ *                 example: password123
+ *     responses:
+ *       201:
+ *         description: Registered successfully
+ *       400:
+ *         description: Validation error
+ *       409:
+ *         description: Email already registered
+ */
+
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Login user
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: vikas@gmail.com
+ *               password:
+ *                 type: string
+ *                 example: password123
+ *     responses:
+ *       200:
+ *         description: Login successful with accessToken
+ *       401:
+ *         description: Invalid credentials
+ */
+
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: User profile
+ *       401:
+ *         description: Not authenticated
+ */
 const express = require("express")
 const router = express.Router()
 
