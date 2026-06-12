@@ -86,10 +86,10 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }))
 app.use(cookieParser())
 
 // Prevent NoSQL injection (cleans req.body, params, query)
-app.use(mongoSanitize())
+//app.use(mongoSanitize())
 
 // Prevent XSS attacks (cleans HTML in request)
-app.use(xss())
+//app.use(xss())
 
 // Prevent HTTP parameter pollution
 app.use(hpp({
