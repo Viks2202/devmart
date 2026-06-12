@@ -9,7 +9,6 @@ const xss = require("xss-clean")
 const hpp = require("hpp")
 const swaggerUi = require("swagger-ui-express")
 require("dotenv").config()
-console.log("RAZORPAY KEY:", process.env.RAZORPAY_KEY_ID)
 
 const connectDB = require("./src/config/db")
 const swaggerSpec = require("./src/config/swagger")
