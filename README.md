@@ -1,79 +1,128 @@
-# DevMart — E-commerce REST API
+# DevMart — Production E-commerce REST API
 
 A production-grade e-commerce backend built with Node.js, Express, and MongoDB.
 
-## Live API
-https://devmart-api.onrender.com
+## 🚀 Live
+| | URL |
+|--|--|
+| **API** | https://devmart-api.onrender.com |
+| **Docs** | https://devmart-api.onrender.com/api-docs |
+| **Health** | https://devmart-api.onrender.com/health |
+| **GitHub** | https://github.com/Viks2202/devmart |
 
-## Tech Stack
-- Node.js + Express
-- MongoDB + Mongoose
-- JWT Authentication
-- Cloudinary (image upload)
-- Nodemailer + Mailtrap
-- Bcrypt
+> Free tier sleeps after 15 min inactivity. First request may take 30-60 sec.
 
-## Features
-- User auth (register, login, JWT, refresh tokens)
-- Email verification + password reset
-- Product CRUD with image upload
-- Advanced search, filters, pagination
-- Cart management
-- Order placement and tracking
-- Product reviews and ratings
-- Admin dashboard with analytics
-- Role-based access control
+## 🛠 Tech Stack
+| Category | Technology |
+|----------|-----------|
+| Runtime | Node.js |
+| Framework | Express.js |
+| Database | MongoDB Atlas + Mongoose |
+| Auth | JWT + bcrypt + Refresh Tokens |
+| File Storage | Cloudinary |
+| Email | Nodemailer + Mailtrap |
+| Payment | Razorpay |
+| Security | Helmet + CORS + Rate Limiting + XSS + NoSQL Injection |
+| Logging | Winston |
+| Documentation | Swagger/OpenAPI |
+| Deployment | Render |
 
-## API Endpoints
+## ✅ Features
+- **Authentication** — Register, Login, JWT access/refresh tokens, Email verification, Password reset
+- **Products** — CRUD with image upload, Search, Filter by category/price, Pagination, Sort
+- **Cart** — Add/remove/update items, Auto price calculation
+- **Orders** — Place, track, cancel orders with status history
+- **Reviews** — Add reviews with auto product rating updates
+- **Wishlist** — Save/remove products
+- **Coupons** — Percentage and fixed discounts with usage limits
+- **Payments** — Razorpay integration with signature verification
+- **Admin** — Dashboard analytics, user management, order management
+- **Security** — Rate limiting, Helmet headers, XSS protection, NoSQL injection prevention
 
-### Auth
-- POST /auth/register
-- POST /auth/login
-- GET  /auth/me
-- POST /auth/forgot-password
-- POST /auth/reset-password/:token
+## 📋 API Endpoints
 
-### Products
-- GET    /products
-- GET    /products/:id
-- POST   /products (admin)
-- PUT    /products/:id (admin)
-- DELETE /products/:id (admin)
+### Base URL: `/api/v1`
 
-### Cart
-- GET    /cart
-- POST   /cart/add
-- PUT    /cart/update
-- DELETE /cart/item/:productId
+### Auth `/api/v1/auth`
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | /register | Register user | No |
+| POST | /login | Login | No |
+| GET | /me | Get profile | Yes |
+| PUT | /profile | Update profile | Yes |
+| PUT | /change-password | Change password | Yes |
+| POST | /forgot-password | Send reset email | No |
+| POST | /reset-password/:token | Reset password | No |
+| GET | /verify-email/:token | Verify email | No |
+| POST | /logout | Logout | Yes |
 
-### Orders
-- POST /orders
-- GET  /orders/my
-- GET  /orders/:id
-- PUT  /orders/:id/cancel
+### Products `/api/v1/products`
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | / | Get all with filters | No |
+| GET | /:id | Get single product | No |
+| POST | / | Create product | Admin |
+| PUT | /:id | Update product | Admin |
+| DELETE | /:id | Delete product | Admin |
+| POST | /:id/images | Upload images | Admin |
 
-### Admin
-- GET /admin/stats
-- GET /admin/users
-- GET /admin/orders
+### Cart `/api/v1/cart`
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | / | Get my cart | Yes |
+| POST | /add | Add to cart | Yes |
+| PUT | /update | Update quantity | Yes |
+| DELETE | /item/:productId | Remove item | Yes |
+| DELETE | /clear | Clear cart | Yes |
 
-## Setup Locally
-```bash
-git clone https://github.com/Viks2202/devmart
-cd devmart
-npm install
-# Add .env file with your credentials
-npm run dev
-```
+### Orders `/api/v1/orders`
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | / | Place order (supports coupon) | Yes |
+| GET | /my | My orders | Yes |
+| GET | /all | All orders | Admin |
+| GET | /:id | Single order | Yes |
+| PUT | /:id/status | Update status | Admin |
+| PUT | /:id/cancel | Cancel order | Yes |
 
-## Environment Variables
-```
-MONGO_URI=
-JWT_SECRET=
-JWT_REFRESH_SECRET=
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-MAILTRAP_USER=
-MAILTRAP_PASS=
-```
+### Reviews `/api/v1/reviews`
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | /:productId | Add review | Yes |
+| GET | /:productId | Get reviews | No |
+| DELETE | /:reviewId | Delete review | Yes |
+
+### Wishlist `/api/v1/wishlist`
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | / | Get my wishlist | Yes |
+| POST | /add | Add to wishlist | Yes |
+| GET | /check/:productId | Check if wishlisted | Yes |
+| DELETE | /item/:productId | Remove from wishlist | Yes |
+| DELETE | /clear | Clear wishlist | Yes |
+
+### Coupons `/api/v1/coupons`
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | /apply | Validate coupon | Yes |
+| GET | / | All coupons | Admin |
+| POST | / | Create coupon | Admin |
+| PUT | /:id | Update coupon | Admin |
+| DELETE | /:id | Delete coupon | Admin |
+
+### Payment `/api/v1/payment`
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | /create | Create Razorpay order | Yes |
+| POST | /verify | Verify payment | Yes |
+| GET | /status/:orderId | Payment status | Yes |
+
+### Admin `/api/v1/admin`
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | /stats | Dashboard stats | Admin |
+| GET | /users | All users | Admin |
+| GET | /products | All products | Admin |
+| GET | /orders | All orders | Admin |
+
+## 🔍 Query Parameters (GET /api/v1/products)
