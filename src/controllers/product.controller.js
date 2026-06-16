@@ -1,6 +1,8 @@
 const asyncHandler = require("../middlewares/async.middleware")
 const CustomError = require("../middlewares/customError")
 const Product = require("../models/product.model")
+const Cart = require("../models/cart.model")
+const Order = require("../models/order.model")
 const {
   uploadToCloudinary,
   deleteFromCloudinary
@@ -285,6 +287,88 @@ const deleteProductImage = asyncHandler(async (req, res, next) => {
   })
 })
 
+// AI-powered product recommendations based on cart + purchase history
+const getRecommendations = asyncHandler(async (req, res) => {
+  const userId = req.user.id
+
+  // Step 1: Get user's cart items
+  const cart = await Cart.findOne({ user: userId }).populate("items.product", "category")
+
+  // Step 2: Get user's order history
+  const orders = await Order.find({ user: userId, status: { $ne: "cancelled" } })
+    .select("items")
+    .lean()
+
+  // Step 3: Build category preference map
+  const categoryCount = {}
+
+  // Add cart categories
+  cart?.items?.forEach(item => {
+    if (item.product?.category) {
+      categoryCount[item.product.category] = (categoryCount[item.product.category] || 0) + 2
+    }
+  })
+
+  // Add order history categories
+  orders.forEach(order => {
+    order.items?.forEach(item => {
+      if (item.category) {
+        categoryCount[item.category] = (categoryCount[item.category] || 0) + 1
+      }
+    })
+  })
+
+  // Step 4: Get products the user already has in cart (to exclude)
+  const cartProductIds = cart?.items?.map(i => i.product?._id?.toString()) || []
+
+  // Step 5: Sort categories by preference
+  const sortedCategories = Object.entries(categoryCount)
+    .sort(([, a], [, b]) => b - a)
+    .map(([cat]) => cat)
+
+  let recommendations = []
+
+  if (sortedCategories.length > 0) {
+    // Find products in preferred categories, excluding cart items
+    recommendations = await Product.find({
+      isActive: true,
+      category: { $in: sortedCategories },
+      _id: { $nin: cartProductIds }
+    })
+    .sort({ ratings: -1, numReviews: -1 })
+    .limit(8)
+
+    // Sort by how preferred the category is
+    recommendations = recommendations.sort((a, b) => {
+      const aScore = sortedCategories.indexOf(a.category)
+      const bScore = sortedCategories.indexOf(b.category)
+      return aScore - bScore
+    })
+  }
+
+  // If not enough recommendations, fill with popular products
+  if (recommendations.length < 4) {
+    const existingIds = recommendations.map(p => p._id.toString())
+    const popular = await Product.find({
+      isActive: true,
+      _id: { $nin: [...cartProductIds, ...existingIds] }
+    })
+    .sort({ ratings: -1, numReviews: -1 })
+    .limit(8 - recommendations.length)
+
+    recommendations = [...recommendations, ...popular]
+  }
+
+  res.status(200).json({
+    success: true,
+    basedOn: sortedCategories.length > 0
+      ? `Your interest in ${sortedCategories.slice(0, 2).join(" and ")}`
+      : "Popular products",
+    count: recommendations.length,
+    recommendations
+  })
+})
+
 module.exports = {
   getAllProducts,
   getProduct,
@@ -295,5 +379,6 @@ module.exports = {
   getProductsByCategory,
   searchProducts,
   uploadProductImages,
-  deleteProductImage
+  deleteProductImage,
+  getRecommendations
 }

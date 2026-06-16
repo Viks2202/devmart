@@ -4,6 +4,7 @@ const stockCheck = require("../middlewares/stockCheck.middleware")
 const priceCheck = require("../middlewares/priceCheck.middleware")
 const { protect, authorize } = require("../middlewares/auth.middleware")
 const { upload } = require("../middlewares/upload.middleware")
+const { getRecommendations } = require("../controllers/product.controller")
 
 const {
   getAllProducts,
@@ -23,6 +24,7 @@ router.get("/search", searchProducts)
 router.get("/stats", getProductStats)
 router.get("/category/:category", getProductsByCategory)
 router.get("/", priceCheck, getAllProducts)
+router.get("/recommendations", protect, getRecommendations)
 router.get("/:id", getProduct)
 
 // protected routes — admin only
