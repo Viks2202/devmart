@@ -158,6 +158,7 @@ const getOrder = asyncHandler(async (req, res, next) => {
 })
 
 
+
 // UPDATE order status — admin
 const updateOrderStatus = asyncHandler(async (req, res, next) => {
   const { status } = req.body
@@ -182,6 +183,20 @@ const updateOrderStatus = asyncHandler(async (req, res, next) => {
 
   if (!order) {
     return next(new CustomError("Order not found", 404))
+  }
+
+  // Real-time notification via Socket.io
+  const io = req.app.get("io")
+  const connectedUsers = req.app.get("connectedUsers")
+  const userId = order.user.toString()
+  const socketId = connectedUsers.get(userId)
+
+  if (socketId) {
+    io.to(socketId).emit("orderStatusUpdate", {
+      orderId: order._id,
+      status: order.status,
+      message: `Your order is now: ${order.status}`
+    })
   }
 
   res.status(200).json({
